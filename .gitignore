@@ -1,0 +1,4 @@
+# Nested env files 
+
+env/
+*/**/env/
