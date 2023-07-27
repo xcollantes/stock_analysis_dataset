@@ -2,6 +2,6 @@
 
 Dataset storage for stock symbol information. 
 
-## nasdaq_symbols.txt 
+## companies.csv 
 
-Cleaned list of NASDAQ symbols.  Cleaned to have `BRK` instead of `BRK/A`.  
+Dataset from https://www.kaggle.com/datasets/marketahead/all-us-stocks-tickers-company-info-logos   
