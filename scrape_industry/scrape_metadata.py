@@ -1,4 +1,4 @@
-"""Scrape stock metadata from Nasdaq."""
+"""Scrape stock metadata."""
 
 import csv
 import pandas as pd
@@ -6,28 +6,40 @@ import requests
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome import options as chrome_options
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.options import Options
 
 
 def main():
-    nasdaq_df = get_stonks()
+    """Input must be CSV file with stock symbols in the zero index."""
+    stock_symbol_filepath: str = ""
+    output_metadata_filepath: str = ""
+    
     driver = create_webdriver()
+    
+    # Get list of cleaned stock symbols 
+    with open("../nasdaq_symbols.csv", "r") as symbol_file, open("output_stock_symbol_industry.csv", "w") as output_file:
+        csv_reader = csv.reader(symbol_file, delimiter=",")
 
-    with open("stock_industry.csv", "w") as file:
-        writer = csv.DictWriter(file, fieldnames=["symbol", "sector", "industry"])
+        writer = csv.DictWriter(output_file, fieldnames=["symbol", "sector", "industry"])
         writer.writeheader()
         
-        for symbol in nasdaq_df["symbol"]:
-            if "^" not in symbol:
-                page_result: tuple[str, str] = get_industry(driver, symbol)
-                writer.writerow({ "symbol": symbol, "sector": page_result[0], "industry": page_result[1] })    
+        for line_symbol in csv_reader:
+            symbol = line_symbol[0]
+            
+            page_result: tuple[str, str] = get_industry(driver, symbol)
+            new_row = { 
+                        "symbol": symbol, 
+                        "sector": page_result[0], 
+                        "industry": page_result[1] 
+                      }
+            
+            print(new_row)
+            writer.writerow(new_row)    
     
     
 def get_industry(driver: webdriver, symbol: str) -> tuple[str, str]:
+    """Scrape from Yahoo Finance."""  
     sector_element = ""
     industry_element = ""
 
