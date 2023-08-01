@@ -12,36 +12,37 @@ from selenium.webdriver.chrome.options import Options
 
 def main():
     """Input must be CSV file with stock symbols in the zero index."""
-    stock_symbol_filepath: str = ""
-    output_metadata_filepath: str = ""
+    stock_symbol_filepath: str = "./us_tickers.csv"
+    output_metadata_filepath: str = "./new_columns_to_add.csv"
     
     driver = create_webdriver()
     
     # Get list of cleaned stock symbols 
-    with open("../nasdaq_symbols.csv", "r") as symbol_file, open("output_stock_symbol_industry.csv", "w") as output_file:
+    with open(stock_symbol_filepath, "r") as symbol_file, open(output_metadata_filepath, "w") as output_file:
         csv_reader = csv.reader(symbol_file, delimiter=",")
 
-        writer = csv.DictWriter(output_file, fieldnames=["symbol", "sector", "industry"])
+        writer = csv.DictWriter(output_file, fieldnames=["symbol", "sector", "industry", "description", "website"])
         writer.writeheader()
         
         for line_symbol in csv_reader:
             symbol = line_symbol[0]
             
-            page_result: tuple[str, str] = get_industry(driver, symbol)
+            page_result: tuple[str, str, str, str] = get_yahoo_data(driver, symbol)
             new_row = { 
                         "symbol": symbol, 
                         "sector": page_result[0], 
-                        "industry": page_result[1] 
+                        "industry": page_result[1],
+                        "description": page_result[2],
+                        "website": page_result[3]
                       }
             
             print(new_row)
             writer.writerow(new_row)    
     
     
-def get_industry(driver: webdriver, symbol: str) -> tuple[str, str]:
+def get_yahoo_data(driver: webdriver, symbol: str) -> tuple[str, str, str, str]:
     """Scrape from Yahoo Finance."""  
-    sector_element = ""
-    industry_element = ""
+    sector_element = industry_element = desc_element = website_element = ""
 
     try: 
         driver.get(f"https://finance.yahoo.com/quote/{symbol}/profile?p={symbol}")
@@ -51,18 +52,30 @@ def get_industry(driver: webdriver, symbol: str) -> tuple[str, str]:
         print(te)
 
     try:
-        sector_select = "#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > p.D\(ib\).Va\(t\) > span:nth-child(2)"
-        sector_element = driver.find_element(By.CSS_SELECTOR, sector_select).text
-    except NoSuchElementException as nse:
+        select = "#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > p.D\(ib\).Va\(t\) > span:nth-child(2)"
+        sector_element = driver.find_element(By.CSS_SELECTOR, select).text
+    except NoSuchElementException:
         print(f"No element found for {symbol} sector")
 
     try:
-        industry_select = "#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > p.D\(ib\).Va\(t\) > span:nth-child(5)"
-        industry_element = driver.find_element(By.CSS_SELECTOR, industry_select).text
-    except NoSuchElementException as nse:
+        select = "#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > p.D\(ib\).Va\(t\) > span:nth-child(5)"
+        industry_element = driver.find_element(By.CSS_SELECTOR, select).text
+    except NoSuchElementException:
         print(f"No element found for {symbol} industry")
     
-    return (sector_element, industry_element)
+    try:
+        select = "#Col1-0-Profile-Proxy > section > section.quote-sub-section.Mt\(30px\) > p"
+        desc_element = driver.find_element(By.CSS_SELECTOR, select).text
+    except NoSuchElementException:
+        print(f"No element found for {symbol} description")
+
+    try:
+        select = "#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > p.D\(ib\).W\(47\.727\%\).Pend\(40px\) > a:nth-child(6)"
+        website_element = driver.find_element(By.CSS_SELECTOR, select).text
+    except NoSuchElementException:
+        print(f"No element found for {symbol} website")
+    
+    return (sector_element, industry_element, desc_element, website_element)
 
 
 def create_webdriver() -> webdriver:
